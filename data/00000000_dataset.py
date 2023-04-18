@@ -60,9 +60,21 @@ class MyDataset00000000(BaseDataset):
         self.sep_token_id = self.tokenizer.sep_token_id
         self.pad_token_id = self.tokenizer.pad_token_id
 
-        self.labs_format = "{ITEMID}: {VALUE} {VALUEUOM}"
-        self.prescrips_format = "{DRUG_TYPE} - {DRUG} ({PROD_STRENGTH}): {DOSE_VAL_RX} {DOSE_UNIT_RX}"
-        self.inputs_format = "{ITEMID}: {AMOUNT} {AMOUNTUOM}"
+        self.labs_formats = {
+            "mimiciii": "{ITEMID}: {VALUE} {VALUEUOM}",
+            "mimiciv": "{itemid}: {value} {valueuom}",
+            "eicu": "{labname}: {labresult} {labmeasurename}",
+        }
+        self.prescrips_formats = {
+            "mimiciii": "{DRUG_TYPE} - {DRUG} ({PROD_STRENGTH}): {DOSE_VAL_RX} {DOSE_UNIT_RX}",
+            "mimiciv": "{drug_type} - {drug} ({prod_strength}): {dose_val_rx} {dose_unit_rx}",
+            "eicu": "{drugname}: {dosage} (frequency: {frequency})",
+        }
+        self.inputs_formats = {
+            "mimiciii": "{ITEMID}: {AMOUNT} {AMOUNTUOM}",
+            "mimiciv": "{itemid}: {amount} {amountuom} (rate: {rate} {rateuom})",
+            "eicu": "{drugname} - drugrate: {drugrate} infusionrate: {infusionrate} drugamount: {drugamount} volumeoffluid: {volumeoffluid}",
+        }
 
     
     def __getitem__(self, index):
@@ -93,7 +105,15 @@ class MyDataset00000000(BaseDataset):
             sample_idx = index
         else:
             sample_idx = index - self.cumulative_sizes[dataset_idx - 1]
-        return self.preprocess(self.raw_datasets[dataset_idx][sample_idx])
+        
+        if dataset_idx == 0:
+            dataset_name = "mimiciii"
+        elif dataset_idx == 1:
+            dataset_name = "mimiciv"
+        else:
+            dataset_name = "eicu"
+
+        return self.preprocess(self.raw_datasets[dataset_idx][sample_idx], dataset_name)
     
 
     def tokenize(self, items: List[Dict[str, Any]], format_str: str):
@@ -128,43 +148,61 @@ class MyDataset00000000(BaseDataset):
         return input_ids, attention_mask
         
 
-    def preprocess(self, sample: Dict[str, Any]) -> Dict[str, torch.Tensor]:
+    def preprocess(self, sample: Dict[str, Any], dataset_name: str) -> Dict[str, torch.Tensor]:
         """
         Note:
             You can implement this method to preprocess the sample before returning it.
             This method is called in __getitem__ method.
         """
-        icustay_id = sample["icustay_id"]
+        icustay_id = sample["icustay_id"] if "mimic" in dataset_name else sample["patientunitstayid"]
         label = sample["label"]
-        intime = sample["intime"]
+        intime = sample["intime"] if "mimic" in dataset_name else ""
         
         events: List[str, Any] = sample["data"]
 
         all_input_ids = []
         all_attention_mask = []
 
-        for event in events:
-            time = event["time"]
+        if dataset_name in ["mimiciii", "mimiciv"]:
+            for event in events:
+                if "time" in event:
+                    time = event["time"]
+                else:
+                    time = None
 
-            # Padding is done in the tokenize function
-            # Therefore, all the input_ids and attention_mask should have the same length
-            if "labs" in event and len(event["labs"]) > 0:
-                input_ids, attention_mask = self.tokenize(event["labs"], self.labs_format)
+                # Padding is done in the tokenize function
+                # Therefore, all the input_ids and attention_mask should have the same length
+                if "labs" in event and len(event["labs"]) > 0:
+                    input_ids, attention_mask = self.tokenize(event["labs"], self.labs_formats[dataset_name])
+                    all_input_ids.append(input_ids)
+                    all_attention_mask.append(attention_mask)
+
+                if "prescrips" in event and len(event["prescrips"]) > 0:
+                    input_ids, attention_mask = self.tokenize(event["prescrips"], self.prescrips_formats[dataset_name])
+                    all_input_ids.append(input_ids)
+                    all_attention_mask.append(attention_mask)
+                
+                if "inputs" in event and len(event["inputs"]) > 0:
+                    input_ids, attention_mask = self.tokenize(event["inputs"], self.inputs_formats[dataset_name])
+                    all_input_ids.append(input_ids)
+                    all_attention_mask.append(attention_mask)
+        
+        elif dataset_name == "eicu":
+
+            if "labs" in events and len(events["labs"]) > 0:
+                input_ids, attention_mask = self.tokenize(events["labs"], self.labs_formats[dataset_name])
                 all_input_ids.append(input_ids)
                 all_attention_mask.append(attention_mask)
 
-            if "prescrips" in event and len(event["prescrips"]) > 0:
-                input_ids, attention_mask = self.tokenize(event["prescrips"], self.prescrips_format)
+            if "prescrips" in events and len(events["prescrips"]) > 0:
+                input_ids, attention_mask = self.tokenize(events["prescrips"], self.prescrips_formats[dataset_name])
                 all_input_ids.append(input_ids)
                 all_attention_mask.append(attention_mask)
             
-            if "inputs" in event and len(event["inputs"]) > 0:
-                input_ids, attention_mask = self.tokenize(event["inputs"], self.inputs_format)
+            if "inputs" in events and len(events["inputs"]) > 0:
+                input_ids, attention_mask = self.tokenize(events["inputs"], self.inputs_formats[dataset_name])
                 all_input_ids.append(input_ids)
                 all_attention_mask.append(attention_mask)
-
-            if len(all_input_ids) == 0:
-                continue
 
         return {
             "input_ids": torch.stack(all_input_ids),
