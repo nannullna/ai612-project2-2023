@@ -337,13 +337,7 @@ def main(args):
         pickle.dump(IV_final, f)
     with open(dest_dir + 'eicu_preprocessed.pickle', 'wb') as f:
         pickle.dump(EICU_final, f)
-        
-    with open('./mimiciii_preprocessed.pickle', 'wb') as f:
-        pickle.dump(III_final, f)
-    with open('./mimiciv_preprocessed.pickle', 'wb') as f:
-        pickle.dump(IV_final, f)
-    with open('./eicu_preprocessed.pickle', 'wb') as f:
-        pickle.dump(EICU_final, f)
+
 
 
 if __name__ == "__main__":
