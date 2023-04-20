@@ -18,12 +18,14 @@ def get_parser():
     parser.add_argument(
         "root",
         metavar="DIR",
+        default='./train/',
         help="root directory containing different ehr files to pre-process (usually, 'train/')"
     )
     parser.add_argument(
         "--dest",
         type=str,
         metavar="DIR",
+        default= './outcome',
         help="output directory"
     )
     return parser
@@ -77,13 +79,15 @@ def look_up_table(data_type, target_df, dict_df, order):
         label_col_name = 'label'
 
     target_df[itemid_col_name] = target_df[itemid_col_name].astype(str)
+    dict_df[itemid_col_name] = dict_df[itemid_col_name].astype(str)
+    
     for i in tqdm(range(len(target_df)), desc= f'*** LOOK UP TABLE ({order}/4) ***'):
         itemid = str(target_df[itemid_col_name].iloc[i])
         #if i == 0:
         #    target_df[item_col_name] = ''
         target_df[itemid_col_name].iloc[i] = str(dict_df[dict_df[itemid_col_name]==itemid][label_col_name].iloc[0])
     
-    target_df.drop(itemid_col_name, axis=1, inplace=True)
+    # target_df.drop(itemid_col_name, axis=1, inplace=True)
     
     return target_df
 
@@ -296,33 +300,33 @@ def main(args):
     EICU_input = pd.read_csv(EICU_DATA_PATH + 'infusionDrug.csv')
     EICU_label = pd.read_csv(root_dir + 'labels/eicu_labels.csv')
 
-
+        
     ### Create ICUSTAY_ID column for MIMIC Dataset
     III_lab['ICUSTAY_ID'] = int(0)
     IV_lab['stay_id'] = int(0)
     IV_prescrip['stay_id'] = int(0)
-    III_lab, IV_lab, IV_prescrip  = make_icustay_id(III_lab, III_icustay, IV_lab, IV_prescrip, IV_icustay) # 17m + 26m
+    III_lab, IV_lab, IV_prescrip  = make_icustay_id(III_lab, III_icustay, IV_lab, IV_prescrip, IV_icustay) # 17m + 26m + 11m
 
     ### Concat the inputCV+inputMV for MIMIC-III
     III_input_mv.rename(columns = {'STARTTIME' : 'CHARTTIME'}, inplace = True)
     III_input = pd.concat([III_input_cv, III_input_mv], axis=0).sort_values('ICUSTAY_ID')
     III_input = III_input.reset_index(drop=True)
 
-    ### Look-up table for MIMIC dataset
-    III_input = look_up_table('III', III_input, III_input_items, 1)
-    III_lab = look_up_table('III', III_lab, III_lab_items, 2)
-    IV_input = look_up_table('IV', IV_input, IV_input_items, 3)
-    IV_lab = look_up_table('IV', IV_lab, IV_lab_items, 4)
+    # ### Look-up table for MIMIC dataset
+    III_input = look_up_table('III', III_input, III_input_items, 1) # 22m
+    III_lab = look_up_table('III', III_lab, III_lab_items, 2) # 14m
+    IV_input = look_up_table('IV', IV_input, IV_input_items, 3) # 11m
+    IV_lab = look_up_table('IV', IV_lab, IV_lab_items, 4) # 23m
     
     ### Merge two similar columns for eICU
     EICU_lab['labmeasurename'] = np.where(pd.notnull(EICU_lab['labmeasurenamesystem']) == True, 
                                           EICU_lab['labmeasurenamesystem'], EICU_lab['labmeasurenameinterface'])
-    EICU_lab.drop(['labmeasurenamesystem', 'labmeasurenameinterface'], axis=1, drop=True)
+    EICU_lab.drop(['labmeasurenamesystem', 'labmeasurenameinterface'], axis=1, inplace=True)
     
     ### Make dictionary
-    III_final = MIMIC_make_final_dict('III', III_lab, III_prescrip, III_input, III_label, III_icustay)
-    IV_final = MIMIC_make_final_dict('IV', IV_lab, IV_prescrip, IV_input, IV_label, IV_icustay)
-    EICU_final = EICU_make_final_dict(EICU_lab, EICU_prescrip, EICU_input, EICU_label)
+    III_final = MIMIC_make_final_dict('III', III_lab, III_prescrip, III_input, III_label, III_icustay) # 18m
+    IV_final = MIMIC_make_final_dict('IV', IV_lab, IV_prescrip, IV_input, IV_label, IV_icustay) # 26m
+    EICU_final = EICU_make_final_dict(EICU_lab, EICU_prescrip, EICU_input, EICU_label) # 12m
     
     ### Save
     if not os.path.exists(dest_dir):
@@ -332,6 +336,13 @@ def main(args):
     with open(dest_dir + 'mimiciv_preprocessed.pickle', 'wb') as f:
         pickle.dump(IV_final, f)
     with open(dest_dir + 'eicu_preprocessed.pickle', 'wb') as f:
+        pickle.dump(EICU_final, f)
+        
+    with open('./mimiciii_preprocessed.pickle', 'wb') as f:
+        pickle.dump(III_final, f)
+    with open('./mimiciv_preprocessed.pickle', 'wb') as f:
+        pickle.dump(IV_final, f)
+    with open('./eicu_preprocessed.pickle', 'wb') as f:
         pickle.dump(EICU_final, f)
 
 
