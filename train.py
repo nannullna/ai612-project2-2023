@@ -51,6 +51,18 @@ def get_parser():
         help="path to your processed features, will be used in the dataset class"
     )
 
+    parser.add_argument(
+        "--model_path",
+        type=str,
+        required=True,
+        help="path to hugginface pretrained model, will be used for tokenization as well"
+    ) # !! 제출시 삭제 해야함. 실험 편의성을 위해 임시로 둠.
+
+    parser.add_argument(
+        "--bert_unfreeze",
+        action='store_true',
+    ) # !! 제출시 삭제 해야함. 실험 편의성을 위해 임시로 둠.
+
     # validation
     parser.add_argument(
         "--valid_percent",
@@ -389,10 +401,19 @@ def train(
                 # the end-of-epoch stats will still be preserved
                 metrics.reset_meters("train_inner")
 
-    if trainer.valid_iterator is not None:
-        valid_loss = validate(
-            args, trainer, epoch
-        )
+        ### Edit for test
+        if i > 0 and i % 50000 == 0:
+            if trainer.valid_iterator is not None:
+                valid_loss = validate(
+                    args, trainer, epoch
+                )       
+        
+        ### 
+
+    # if trainer.valid_iterator is not None:
+    #     valid_loss = validate(
+    #         args, trainer, epoch
+    #     )
 
     if epoch % args.save_interval == 0:
         checkpoint_utils.save_checkpoint(

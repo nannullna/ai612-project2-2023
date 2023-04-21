@@ -207,7 +207,7 @@ class MyDataset00000000(BaseDataset):
         return {
             "input_ids": torch.stack(all_input_ids),
             "attention_mask": torch.stack(all_attention_mask),
-            "label": label,
+            "labels": label,
             "intime": intime,
             "icustay_id": icustay_id,
         }
