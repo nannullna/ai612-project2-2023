@@ -6,6 +6,7 @@ __pycache__/
 # Data
 *.csv
 *.pickle
+*.zip
 
 # C extensions
 *.so
