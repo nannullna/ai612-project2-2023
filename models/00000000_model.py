@@ -5,7 +5,7 @@ from . import BaseModel, register_model
 import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
-from transformers import BertModel
+from transformers import AutoModel
 
 @register_model("00000000_model")
 class MyModel00000000(BaseModel):
@@ -27,8 +27,8 @@ class MyModel00000000(BaseModel):
         **kwargs,
     ):
         super().__init__()
-
-        self.bert = BertModel.from_pretrained(kwargs['model_path'], return_dict=False)
+        
+        self.bert = AutoModel.from_pretrained(kwargs['model_path'], return_dict=False)
         # Freeze bert layers
         if not kwargs['bert_unfreeze']:
             for p in self.bert.parameters():
@@ -53,21 +53,6 @@ class MyModel00000000(BaseModel):
             Assure that get_logits(...) should return the logits in the shape of (batch, 52)
         """
 
-        # logits = torch.zeros_like(net_output, device=net_output.device)
-
-        # sig = nn.Sigmoid()
-        # softmax = nn.Softmax(dim=1)
-
-        # # binary
-        # idx = 22
-        # logits[:, :idx] = sig(net_output[:, :idx])
-
-        # # multiclass
-        # class_num = [6, 6, 5, 5, 5, 3]
-        # for n in class_num:
-        #     logits[:, idx:idx+n] = softmax(net_output[:, idx:idx+n])
-        #     idx += n
-            
         return net_output
     
     def get_targets(self, sample):
@@ -82,7 +67,7 @@ class MyModel00000000(BaseModel):
         # string element to list
         targets = [list(map(eval, t)) for t in targets]
 
-        return torch.tensor(targets).to(sample['input_ids'].device)
+        return torch.tensor(targets).to(sample['input_ids'][0].device)
 
     def forward(
         self,
@@ -105,14 +90,17 @@ class MyModel00000000(BaseModel):
                 def forward(self, data_key, **kwargs):
                     (...)
         """
-        _, embedding = self.bert(
-            input_ids=input_ids.squeeze(0),
-            attention_mask=attention_mask.squeeze(0) # 원래 기대하는 shape는 (bs, max sequence length)
-        ) # output > (30, 768)
+        embeddings = [self.bert(input_ids=i, attention_mask=m)[1] for i, m in zip(input_ids, attention_mask)]
 
-        embedding = torch.flip(embedding, [0]) # reverse order
-        agg = self.agg(embedding, 128)  # output > (1, 128)
-        output = self.customs(agg) # (1, 52)
+        # _, embedding = self.bert(
+        #     input_ids=input_ids.squeeze(0),
+        #     attention_mask=attention_mask.squeeze(0) # 원래 기대하는 shape는 (bs, max sequence length)
+        # ) # output > (ts, 768)
+
+        embeddings = torch.stack([torch.flip(e, [0]) for e in embeddings]) # (bs, max_timestep, 768)
+
+        agg = self.agg(embeddings, kwargs['timesteps'])  # output > (2, 128)
+        output = self.customs(agg) # (2, 52)
 
         return output
 
@@ -146,16 +134,15 @@ class RNNModel(nn.Module):
 
     def forward(self, x, seq_len, **kwargs):
         # self.model.flatten_parameters()
-        
-        # unsqueeze 
-        x = x.unsqueeze(0)
 
-        h_0 = self._init_state(batch_size=x.size(0))
-        x, _ = self.model(x, h_0)
-        h_t = x[:, -1]
+        output_seq, _ = self.pack_pad_seq(x, seq_len)
+        output_seq = output_seq[:, -1] # (2, 256)
+        # h_0 = self._init_state(batch_size=x.size(0))
+        # x, _ = self.model(x, h_0)
+        # h_t = x[:, -1]
 
-        self.dropout(h_t)
-        output = self.final_proj(h_t)
+        self.dropout(output_seq)
+        output = self.final_proj(output_seq)
         
         return output
     
@@ -164,11 +151,11 @@ class RNNModel(nn.Module):
         weight = weight.new(self.n_layers, batch_size, self.hidden_dim).zero_()
         return weight
 
-    # def pack_pad_seq(self, x, lengths):
-    #     lengths = lengths.squeeze(-1).cpu()
+    def pack_pad_seq(self, x, lengths):
+        lengths = torch.tensor(lengths).squeeze(-1).cpu()
 
-    #     packed =  pack_padded_sequence(x, lengths, batch_first=True, enforce_sorted=False)
-    #     output, _ = self.model(packed)
-    #     output_seq, output_len = pad_packed_sequence(output, batch_first=True, padding_value=0)
+        packed =  pack_padded_sequence(x, lengths, batch_first=True, enforce_sorted=False)
+        output, _ = self.model(packed)
+        output_seq, output_len = pad_packed_sequence(output, batch_first=True, padding_value=0)
         
-    #     return output_seq, output_len
+        return output_seq, output_len

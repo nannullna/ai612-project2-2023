@@ -5,7 +5,7 @@ import pickle
 import os
 import torch
 
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, DataCollatorWithPadding
 
 @register_dataset("00000000_dataset")
 class MyDataset00000000(BaseDataset):
@@ -205,7 +205,7 @@ class MyDataset00000000(BaseDataset):
                 all_attention_mask.append(attention_mask)
 
         return {
-            "input_ids": torch.stack(all_input_ids),
+            "input_ids": torch.stack(all_input_ids), # shape > (bs, 128 = max_sequence_length)
             "attention_mask": torch.stack(all_attention_mask),
             "labels": label,
             "intime": intime,
@@ -229,5 +229,21 @@ class MyDataset00000000(BaseDataset):
             You can use it to make your batch on your own such as outputting padding mask together.
             Otherwise, you don't need to implement this method.
         """
+        # input_ids, attention_mask, labels, intime, icustay_id
+        origin_timesteps = [len(s['input_ids']) for s in samples]
+        batch_max = max(origin_timesteps)
 
-        raise NotImplementedError
+        input_ids = [torch.cat([s['input_ids'], torch.zeros(batch_max-len(s['input_ids']), self.MODEL_MAX_LENGTH, dtype=s['input_ids'].dtype)], dim=0) for s in samples]
+        attention_masks = [torch.cat([s['attention_mask'], torch.zeros(batch_max-len(s['input_ids']), self.MODEL_MAX_LENGTH, dtype=s['input_ids'].dtype)], dim=0) for s in samples]
+        intimes = [s['intime'] for s in samples]
+        labels = [s['labels'] for s in samples]
+        icustay_ids = [s['icustay_id'] for s in samples]
+        
+        return {
+            "input_ids": input_ids, 
+            "attention_mask": attention_masks,
+            "labels": labels,
+            "intime": intimes,
+            "icustay_id": icustay_ids,
+            "timesteps": origin_timesteps,
+        }
