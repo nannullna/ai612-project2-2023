@@ -21,7 +21,7 @@ class MyDataset00000000(BaseDataset):
             (...)
     """
 
-    PRETRAINED_MODEL_NAME_OR_PATH = "emilyalsentzer/Bio_ClinicalBERT"
+    # PRETRAINED_MODEL_NAME_OR_PATH = "emilyalsentzer/Bio_ClinicalBERT"
     MODEL_MAX_LENGTH = 128
 
     @staticmethod
@@ -53,7 +53,7 @@ class MyDataset00000000(BaseDataset):
         self.raw_datasets = [self.mimiciii, self.mimiciv, self.eicu]
         self.cumulative_sizes = self.cumsum(self.raw_datasets)
 
-        self.tokenizer = AutoTokenizer.from_pretrained(self.PRETRAINED_MODEL_NAME_OR_PATH)
+        self.tokenizer = AutoTokenizer.from_pretrained(kwargs['model_path'])
 
         self.bos_token_id = self.tokenizer.bos_token_id if self.tokenizer.bos_token_id is not None else self.tokenizer.cls_token_id
         self.eos_token_id = self.tokenizer.eos_token_id if self.tokenizer.eos_token_id is not None else self.tokenizer.sep_token_id
@@ -207,7 +207,7 @@ class MyDataset00000000(BaseDataset):
         return {
             "input_ids": torch.stack(all_input_ids),
             "attention_mask": torch.stack(all_attention_mask),
-            "label": label,
+            "labels": label,
             "intime": intime,
             "icustay_id": icustay_id,
         }
