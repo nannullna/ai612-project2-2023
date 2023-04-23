@@ -1,0 +1,24 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "--student_number", "00000000", 
+                "--data_path", "/root/healthcare/ai612-project2-2023/output",
+                "--model_path", "emilyalsentzer/Bio_ClinicalBERT",
+                "--batch_size", "2",
+                "--valid_percent", "0.2",
+                "--bert_unfreeze",
+                "--device_id", "0"]
+        }
+    ]
+}

@@ -42,9 +42,9 @@ class MyDataset00000000(BaseDataset):
         super().__init__()
         self.data_path = data_path
 
-        self.mimiciii_path = os.path.join(self.data_path, "mimiciii.pickle")
-        self.mimiciv_path  = os.path.join(self.data_path, "mimiciv.pickle")
-        self.eicu_path     = os.path.join(self.data_path, "eicu.pickle")
+        self.mimiciii_path = os.path.join(self.data_path, "preprocessed_mimiciii.pickle")
+        self.mimiciv_path  = os.path.join(self.data_path, "preprocessed_mimiciv.pickle")
+        self.eicu_path     = os.path.join(self.data_path, "preprocessed_eicu.pickle")
 
         self.mimiciii = pickle.load(open(self.mimiciii_path, "rb")) if os.path.exists(self.mimiciii_path) else []
         self.mimiciv  = pickle.load(open(self.mimiciv_path, "rb")) if os.path.exists(self.mimiciv_path) else []

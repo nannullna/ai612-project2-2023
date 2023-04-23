@@ -72,6 +72,7 @@ class Trainer(object):
                                     f"This might result in an empty dataset.")
 
                 dataset, valid_dataset = random_split(train, lengths)
+
             else:
                 dataset = train
         elif test is not None:

@@ -81,7 +81,7 @@ def get_parser():
     parser.add_argument(
         "--lr",
         type=str,
-        default="[0.005]",
+        default="[0.0001]",
         help="string describing learning rate for the first N epochs in the form of a python list; "
         + "all epochs > N using lr[N-1]"
     )
@@ -401,19 +401,19 @@ def train(
                 # the end-of-epoch stats will still be preserved
                 metrics.reset_meters("train_inner")
 
-        ### Edit for test
-        if i > 0 and i % 50000 == 0:
-            if trainer.valid_iterator is not None:
-                valid_loss = validate(
-                    args, trainer, epoch
-                )       
+        # ### Edit for test
+        # if i > 0 and i % 30000 == 0:
+        #     if trainer.valid_iterator is not None:
+        #         valid_loss = validate(
+        #             args, trainer, epoch
+        #         )       
         
-        ### 
+        # ### 
 
-    # if trainer.valid_iterator is not None:
-    #     valid_loss = validate(
-    #         args, trainer, epoch
-    #     )
+    if trainer.valid_iterator is not None:
+        valid_loss = validate(
+            args, trainer, epoch
+        )
 
     if epoch % args.save_interval == 0:
         checkpoint_utils.save_checkpoint(
