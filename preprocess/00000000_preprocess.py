@@ -18,14 +18,14 @@ def get_parser():
     parser.add_argument(
         "root",
         metavar="DIR",
-        default='./train/',
+        # default='./train/',
         help="root directory containing different ehr files to pre-process (usually, 'train/')"
     )
     parser.add_argument(
         "--dest",
         type=str,
         metavar="DIR",
-        default= './outcome',
+        # default= './outcome',
         help="output directory"
     )
 
