@@ -41,25 +41,29 @@ def get_parser():
     parser.add_argument(
         "--student_number",
         type=str,
-        required=True,
+        default='00000000',
+        #required=True,
         help="your student number"
     )
     parser.add_argument(
         "--data_path",
         type=str,
-        required=True,
+        default='/data5/youngju/ai612-project2-2023',
+        #required=True,
         help="path to your processed features, will be used in the dataset class"
     )
 
     parser.add_argument(
         "--model_path",
         type=str,
-        required=True,
+        default='emilyalsentzer/Bio_ClinicalBERT',
+        #required=True,
         help="path to hugginface pretrained model, will be used for tokenization as well"
     ) # !! 제출시 삭제 해야함. 실험 편의성을 위해 임시로 둠.
 
     parser.add_argument(
         "--bert_unfreeze",
+        default=True,
         action='store_true',
     ) # !! 제출시 삭제 해야함. 실험 편의성을 위해 임시로 둠.
 
@@ -67,7 +71,7 @@ def get_parser():
     parser.add_argument(
         "--valid_percent",
         type=float,
-        default=0.0,
+        default=0.2,
         help="percentage for validation subset"
     )
 
@@ -81,14 +85,14 @@ def get_parser():
     parser.add_argument(
         "--lr",
         type=str,
-        default="[0.0001]",
+        default="[0.00001]",
         help="string describing learning rate for the first N epochs in the form of a python list; "
         + "all epochs > N using lr[N-1]"
     )
     parser.add_argument(
         "--batch_size",
         type=int,
-        default=64,
+        default=2,
         help="batch size"
     )
     parser.add_argument(

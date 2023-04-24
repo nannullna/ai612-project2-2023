@@ -78,15 +78,27 @@ class MultiTaskCriterion(_Loss):
         )
 
         num_classes = [6, 6, 5, 5, 5, 3]
+        nan_dict = {} # 추가
+        nan_list = [] # 추가
         for i, num_class in enumerate(num_classes, start=idx):
+            nan_dict = {} # 추가
             multi_class_target = target[:, i]
             multi_class_logits = logits[:, idx: idx + num_class]
-            loss += F.cross_entropy(
+            
+            tmp_loss = F.cross_entropy(
                 input=multi_class_logits,
                 target=multi_class_target,
                 reduction=reduction,
-                ignore_index=-1
-            )
+                ignore_index=-1) # 추가
+            
+            if not torch.isfinite(tmp_loss): # 추가
+                nan_dict['i']=i
+                nan_dict['target']=multi_class_target
+                nan_dict['logit']=multi_class_logits
+                nan_dict['loss']=loss
+                nan_list.append(nan_dict)
+                
+            loss += tmp_loss
             idx += num_class
 
         logging_output = {

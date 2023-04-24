@@ -14,7 +14,7 @@ from argparse import Namespace
     build_dataset_,
     register_dataset,
     DATASET_REGISTRY
-) = setup_registry("--dataset", base_class=BaseDataset, required=True)
+) = setup_registry("--dataset", base_class=BaseDataset) #, required=True
 
 def build_dataset(args: Namespace):
     return build_dataset_(args)
