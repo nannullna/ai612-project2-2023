@@ -401,12 +401,12 @@ def train(
                 # the end-of-epoch stats will still be preserved
                 metrics.reset_meters("train_inner")
 
-        # ### Edit for test
-        # if i > 0 and i % 30000 == 0:
-        #     if trainer.valid_iterator is not None:
-        #         valid_loss = validate(
-        #             args, trainer, epoch
-        #         )       
+        ### Edit for test
+        if i > 0 and i % 50000 == 0:
+            if trainer.valid_iterator is not None:
+                valid_loss = validate(
+                    args, trainer, epoch
+                )       
         
         # ### 
 

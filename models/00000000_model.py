@@ -42,6 +42,7 @@ class MyModel00000000(BaseModel):
         self.customs = nn.Sequential(
             nn.Dropout(0.3),
             nn.Linear(self.agg.final_dim, custom_hidden_dim), # (128, 64)
+            nn.ReLU(),
             nn.Dropout(0.25),
             nn.Linear(custom_hidden_dim, 52)
         )
@@ -127,9 +128,12 @@ class RNNModel(nn.Module):
 
         self.dropout = nn.Dropout(0.3)
 
-        self.final_proj = nn.Linear(
-            self.hidden_dim,
-            self.final_dim
+        self.final_proj = nn.Sequential(
+            nn.Linear(
+                self.hidden_dim,
+                self.final_dim
+            ),
+            nn.ReLU()
         )
 
     def forward(self, x, seq_len, **kwargs):
@@ -152,7 +156,7 @@ class RNNModel(nn.Module):
         return weight
 
     def pack_pad_seq(self, x, lengths):
-        lengths = torch.tensor(lengths).squeeze(-1).cpu()
+        lengths = torch.tensor(lengths).cpu()
 
         packed =  pack_padded_sequence(x, lengths, batch_first=True, enforce_sorted=False)
         output, _ = self.model(packed)
