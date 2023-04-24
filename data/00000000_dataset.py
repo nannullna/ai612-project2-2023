@@ -42,13 +42,17 @@ class MyDataset00000000(BaseDataset):
         super().__init__()
         self.data_path = data_path
 
-        self.mimiciii_path = os.path.join(self.data_path, "preprocessed_mimiciii.pickle")
-        self.mimiciv_path  = os.path.join(self.data_path, "preprocessed_mimiciv.pickle")
-        self.eicu_path     = os.path.join(self.data_path, "preprocessed_eicu.pickle")
+        print(os.path.abspath(self.data_path))
+
+        self.mimiciii_path = os.path.join(self.data_path, "mimiciii_preprocessed.pickle")
+        self.mimiciv_path  = os.path.join(self.data_path, "mimiciv_preprocessed.pickle")
+        self.eicu_path     = os.path.join(self.data_path, "eicu_preprocessed.pickle")
 
         self.mimiciii = pickle.load(open(self.mimiciii_path, "rb")) if os.path.exists(self.mimiciii_path) else []
         self.mimiciv  = pickle.load(open(self.mimiciv_path, "rb")) if os.path.exists(self.mimiciv_path) else []
-        self.eicu     = pickle.load(open(self.eicu_path, "rb")) if os.path.exists(self.eicu_path) else []   
+        self.eicu     = pickle.load(open(self.eicu_path, "rb")) if os.path.exists(self.eicu_path) else []
+
+        print(os.path.isfile(self.mimiciii_path))
         
         self.raw_datasets = [self.mimiciii, self.mimiciv, self.eicu]
         self.cumulative_sizes = self.cumsum(self.raw_datasets)
@@ -87,8 +91,8 @@ class MyDataset00000000(BaseDataset):
         }
         self.inputs_formats = {
             "mimiciii": "{ITEMID}: {RATE} {RATEUOM} ({STOPPED})",
-            "mimiciv": "{itemid}: {rate} {rateuom} ({stopped})",
-            "eicu": "{drugname}: drugrate: {drugrate, ({infusionrate})",
+            "mimiciv": "{itemid}: {rate} {rateuom}",
+            "eicu": "{drugname}: {drugrate}, ({infusionrate})",
         }
 
 
