@@ -60,21 +60,37 @@ class MyDataset00000000(BaseDataset):
         self.sep_token_id = self.tokenizer.sep_token_id
         self.pad_token_id = self.tokenizer.pad_token_id
 
+        # MIMIC-III
+        # dict_keys(['SUBJECT_ID', 'HADM_ID', 'ICUSTAY_ID', 'STARTDATE', 'ENDDATE', 'DRUG_TYPE', 'DRUG', 'DRUG_NAME_POE', 'DRUG_NAME_GENERIC', 'FORMULARY_DRUG_CD', 'GSN', 'NDC', 'PROD_STRENGTH', 'DOSE_VAL_RX', 'DOSE_UNIT_RX', 'FORM_VAL_DISP', 'FORM_UNIT_DISP', 'ROUTE'])
+        # dict_keys(['SUBJECT_ID', 'HADM_ID', 'ITEMID', 'CHARTTIME', 'VALUE', 'VALUENUM', 'VALUEUOM', 'FLAG', 'ICUSTAY_ID'])
+        # dict_keys(['SUBJECT_ID', 'HADM_ID', 'ICUSTAY_ID', 'CHARTTIME', 'ITEMID', 'AMOUNT', 'AMOUNTUOM', 'RATE', 'RATEUOM', 'STORETIME', 'CGID', 'ORDERID', 'LINKORDERID', 'STOPPED', 'NEWBOTTLE', 'ORIGINALAMOUNT', 'ORIGINALAMOUNTUOM', 'ORIGINALROUTE', 'ORIGINALRATE', 'ORIGINALRATEUOM', 'ORIGINALSITE', 'ENDTIME', 'ORDERCATEGORYNAME', 'SECONDARYORDERCATEGORYNAME', 'ORDERCOMPONENTTYPEDESCRIPTION', 'ORDERCATEGORYDESCRIPTION', 'PATIENTWEIGHT', 'TOTALAMOUNT', 'TOTALAMOUNTUOM', 'ISOPENBAG', 'CONTINUEINNEXTDEPT', 'CANCELREASON', 'STATUSDESCRIPTION', 'COMMENTS_EDITEDBY', 'COMMENTS_CANCELEDBY', 'COMMENTS_DATE'])
+
+        # MIMIC-IV
+        # dict_keys(['subject_id', 'hadm_id', 'pharmacy_id', 'poe_id', 'poe_seq', 'starttime', 'stoptime', 'drug_type', 'drug', 'formulary_drug_cd', 'gsn', 'ndc', 'prod_strength', 'form_rx', 'dose_val_rx', 'dose_unit_rx', 'form_val_disp', 'form_unit_disp', 'doses_per_24_hrs', 'route', 'stay_id'])
+        # dict_keys(['subject_id', 'hadm_id', 'stay_id', 'starttime', 'endtime', 'storetime', 'itemid', 'amount', 'amountuom', 'rate', 'rateuom', 'orderid', 'linkorderid', 'ordercategoryname', 'secondaryordercategoryname', 'ordercomponenttypedescription', 'ordercategorydescription', 'patientweight', 'totalamount', 'totalamountuom', 'isopenbag', 'continueinnextdept', 'statusdescription', 'originalamount', 'originalrate'])
+        # dict_keys(['labevent_id', 'subject_id', 'hadm_id', 'specimen_id', 'itemid', 'charttime', 'storetime', 'value', 'valuenum', 'valueuom', 'ref_range_lower', 'ref_range_upper', 'flag', 'priority', 'comments', 'stay_id'])
+
+        # EICU
+        # dict_keys(['labid', 'patientunitstayid', 'labresultoffset', 'labtypeid', 'labname', 'labresult', 'labresulttext', 'labresultrevisedoffset', 'labmeasurename'])
+        # dict_keys(['medicationid', 'patientunitstayid', 'drugorderoffset', 'drugstartoffset', 'drugivadmixture', 'drugordercancelled', 'drugname', 'drughiclseqno', 'dosage', 'routeadmin', 'frequency', 'loadingdose', 'prn', 'drugstopoffset', 'gtc'])
+        # dict_keys(['infusiondrugid', 'patientunitstayid', 'infusionoffset', 'drugname', 'drugrate', 'infusionrate', 'drugamount', 'volumeoffluid', 'patientweight'])
+        
         self.labs_formats = {
-            "mimiciii": "{ITEMID}: {VALUE} {VALUEUOM}",
-            "mimiciv": "{itemid}: {value} {valueuom}",
-            "eicu": "{labname}: {labresult} {labmeasurename}",
+            "mimiciii": "{ITEMID}: {VALUENUM} {VALUEUOM} ({FLAG})",
+            "mimiciv": "{itemid}: {valuenum} {valueuom} ({flag})",
+            "eicu": "{labname}: {labresult} {labmeasurename} ({labresultoffset})",
         }
         self.prescrips_formats = {
-            "mimiciii": "{DRUG_TYPE} - {DRUG} ({PROD_STRENGTH}): {DOSE_VAL_RX} {DOSE_UNIT_RX}",
-            "mimiciv": "{drug_type} - {drug} ({prod_strength}): {dose_val_rx} {dose_unit_rx}",
-            "eicu": "{drugname}: {dosage} (frequency: {frequency})",
+            "mimiciii": "{DRUG_TYPE} - {DRUG} ({PROD_STRENGTH}): {DOSE_VAL_RX} {DOSE_UNIT_RX} ({ROUTE})",
+            "mimiciv": "{drug_type} - {drug} ({prod_strength}): {dose_val_rx} {dose_unit_rx} ({route})",
+            "eicu": "{drugname}: {drugstartoffset} ({routeadmin}, {drugordercancelled})",
         }
         self.inputs_formats = {
-            "mimiciii": "{ITEMID}: {AMOUNT} {AMOUNTUOM}",
-            "mimiciv": "{itemid}: {amount} {amountuom} (rate: {rate} {rateuom})",
-            "eicu": "{drugname} - drugrate: {drugrate} infusionrate: {infusionrate} drugamount: {drugamount} volumeoffluid: {volumeoffluid}",
+            "mimiciii": "{ITEMID}: {RATE} {RATEUOM} ({STOPPED})",
+            "mimiciv": "{itemid}: {rate} {rateuom} ({stopped})",
+            "eicu": "{drugname}: drugrate: {drugrate, ({infusionrate})",
         }
+
 
     
     def __getitem__(self, index):
