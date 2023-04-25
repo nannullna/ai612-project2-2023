@@ -88,7 +88,7 @@ class MyDataset00000000(BaseDataset):
         self.inputs_formats = {
             "mimiciii": "{ITEMID}: {RATE} {RATEUOM} ({STOPPED})",
             "mimiciv": "{itemid}: {rate} {rateuom} ({stopped})",
-            "eicu": "{drugname}: drugrate: {drugrate, ({infusionrate})",
+            "eicu": "{drugname}: drugrate: {drugrate, ({infusionrate}) infusionoffset: {infusionoffset}",
         }
 
 
