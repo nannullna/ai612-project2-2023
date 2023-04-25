@@ -5,7 +5,7 @@ import pickle
 import os
 import torch
 
-from transformers import AutoTokenizer, DataCollatorWithPadding
+from transformers import AutoTokenizer, DataCollatorWithPadding, PreTrainedTokenizer
 
 @register_dataset("00000000_dataset")
 class MyDataset00000000(BaseDataset):
@@ -22,7 +22,6 @@ class MyDataset00000000(BaseDataset):
     """
 
     # PRETRAINED_MODEL_NAME_OR_PATH = "emilyalsentzer/Bio_ClinicalBERT"
-    MODEL_MAX_LENGTH = 128
 
     @staticmethod
     def cumsum(sequences):
@@ -57,12 +56,16 @@ class MyDataset00000000(BaseDataset):
         self.raw_datasets = [self.mimiciii, self.mimiciv, self.eicu]
         self.cumulative_sizes = self.cumsum(self.raw_datasets)
 
-        self.tokenizer = AutoTokenizer.from_pretrained(kwargs['model_path'])
+        self.tokenizer: PreTrainedTokenizer = AutoTokenizer.from_pretrained(kwargs['model_path'])
 
         self.bos_token_id = self.tokenizer.bos_token_id if self.tokenizer.bos_token_id is not None else self.tokenizer.cls_token_id
         self.eos_token_id = self.tokenizer.eos_token_id if self.tokenizer.eos_token_id is not None else self.tokenizer.sep_token_id
         self.sep_token_id = self.tokenizer.sep_token_id
         self.pad_token_id = self.tokenizer.pad_token_id
+
+        self.max_tokens = kwargs.get("max_tokens", 128)
+        self.max_timesteps = kwargs.get("max_timesteps", 128)
+        self.truncate = kwargs.get("truncate", "last") # Choose among `none`, `first`, `last`
 
         # MIMIC-III
         # dict_keys(['SUBJECT_ID', 'HADM_ID', 'ICUSTAY_ID', 'STARTDATE', 'ENDDATE', 'DRUG_TYPE', 'DRUG', 'DRUG_NAME_POE', 'DRUG_NAME_GENERIC', 'FORMULARY_DRUG_CD', 'GSN', 'NDC', 'PROD_STRENGTH', 'DOSE_VAL_RX', 'DOSE_UNIT_RX', 'FORM_VAL_DISP', 'FORM_UNIT_DISP', 'ROUTE'])
@@ -142,7 +145,7 @@ class MyDataset00000000(BaseDataset):
 
         for item in items:
             input_str = format_str.format(**item)
-            tokenized_inputs = self.tokenizer.encode(input_str, add_special_tokens=False)
+            tokenized_inputs = self.tokenizer.encode(input_str, add_special_tokens=False, )
             all_input_ids.extend(tokenized_inputs)
             all_attention_mask.extend([1] * len(tokenized_inputs))
 
@@ -153,14 +156,14 @@ class MyDataset00000000(BaseDataset):
         all_attention_mask.append(1)
 
         # PAD or TRUNCATE
-        if len(all_input_ids) > self.MODEL_MAX_LENGTH:
-            all_input_ids = all_input_ids[:self.MODEL_MAX_LENGTH-1]
+        if len(all_input_ids) > self.max_tokens:
+            all_input_ids = all_input_ids[:self.max_tokens-1]
             all_input_ids.append(self.eos_token_id)
-            all_attention_mask = all_attention_mask[:self.MODEL_MAX_LENGTH]
+            all_attention_mask = all_attention_mask[:self.max_tokens]
             
         else:
-            all_input_ids.extend([self.pad_token_id] * (self.MODEL_MAX_LENGTH - len(all_input_ids)))
-            all_attention_mask.extend([0] * (self.MODEL_MAX_LENGTH - len(all_attention_mask)))
+            all_input_ids.extend([self.pad_token_id] * (self.max_tokens - len(all_input_ids)))
+            all_attention_mask.extend([0] * (self.max_tokens - len(all_attention_mask)))
 
         input_ids = torch.tensor(all_input_ids, dtype=torch.long)
         attention_mask = torch.tensor(all_attention_mask, dtype=torch.long)
@@ -222,15 +225,26 @@ class MyDataset00000000(BaseDataset):
             if "inputs" in events and len(events["inputs"]) > 0:
                 input_ids, attention_mask = self.tokenize(events["inputs"], self.inputs_formats[dataset_name])
                 all_input_ids.append(input_ids)
-                all_attention_mask.append(attention_mask)
+                all_attention_mask.append(attention_mask)    
 
-        return {
-            "input_ids": torch.stack(all_input_ids), # shape > (bs, 128 = max_sequence_length)
+        outputs = {
+            "input_ids": torch.stack(all_input_ids), # (num_timesteps, num_tokens)
             "attention_mask": torch.stack(all_attention_mask),
             "labels": label,
             "intime": intime,
             "icustay_id": icustay_id,
         }
+
+        # Truncate
+        if self.max_timesteps is not None:
+            if self.truncate == 'first':
+                outputs["input_ids"] = outputs["input_ids"][:self.max_timesteps]
+                outputs["attention_mask"] = outputs["attention_mask"][:self.max_timesteps]
+            elif self.truncate == 'last':
+                outputs["input_ids"] = outputs["input_ids"][-self.max_timesteps:]
+                outputs["attention_mask"] = outputs["attention_mask"][-self.max_timesteps:]
+
+        return outputs
 
     
     def __len__(self):
@@ -253,8 +267,8 @@ class MyDataset00000000(BaseDataset):
         origin_timesteps = [len(s['input_ids']) for s in samples]
         batch_max = max(origin_timesteps)
 
-        input_ids = [torch.cat([s['input_ids'], torch.zeros(batch_max-len(s['input_ids']), self.MODEL_MAX_LENGTH, dtype=s['input_ids'].dtype)], dim=0) for s in samples]
-        attention_masks = [torch.cat([s['attention_mask'], torch.zeros(batch_max-len(s['input_ids']), self.MODEL_MAX_LENGTH, dtype=s['input_ids'].dtype)], dim=0) for s in samples]
+        input_ids = [torch.cat([s['input_ids'], torch.zeros(batch_max-len(s['input_ids']), self.max_tokens, dtype=s['input_ids'].dtype)], dim=0) for s in samples]
+        attention_masks = [torch.cat([s['attention_mask'], torch.zeros(batch_max-len(s['input_ids']), self.max_tokens, dtype=s['input_ids'].dtype)], dim=0) for s in samples]
         intimes = [s['intime'] for s in samples]
         labels = [s['labels'] for s in samples]
         icustay_ids = [s['icustay_id'] for s in samples]
