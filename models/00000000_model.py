@@ -29,10 +29,18 @@ class MyModel00000000(BaseModel):
         super().__init__()
         
         self.bert = AutoModel.from_pretrained(kwargs['model_path'], return_dict=False)
-        # Freeze bert layers
-        if not kwargs['bert_unfreeze']:
+        # Freeze all BERT layers
+        if not kwargs.get('bert_unfreeze', False):
             for p in self.bert.parameters():
                 p.requires_grad = False
+    
+        # Freeze all BERT layers except the last 2 encoder layers
+        elif kwargs.get('bert_unfreeze_top3', False):
+            for i, module in enumerate(self.bert.encoder.children()):
+                if i < 8:
+                    for param in module.parameters():
+                        param.requires_grad = False
+
 
         # Event Aggregator
         self.agg = RNNModel()
@@ -115,7 +123,7 @@ class RNNModel(nn.Module):
         self.hidden_dim = 256
         self.final_dim = 128
         drop_out = 0.3
-        self.n_layers = 3
+        self.n_layers = 1
 
         self.model = nn.GRU(
             input_size,
