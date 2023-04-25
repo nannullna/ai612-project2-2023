@@ -91,14 +91,14 @@ class MultiTaskCriterion(_Loss):
                 reduction=reduction,
                 ignore_index=-1) # 추가
             
-            if not torch.isfinite(tmp_loss): # 추가
-                nan_dict['i']=i
-                nan_dict['target']=multi_class_target
-                nan_dict['logit']=multi_class_logits
-                nan_dict['loss']=loss
-                nan_list.append(nan_dict)
-                
-            loss += tmp_loss
+            # if not torch.isfinite(tmp_loss): # 추가
+            #     nan_dict['i']=i
+            #     nan_dict['target']=multi_class_target
+            #     nan_dict['logit']=multi_class_logits
+            #     nan_dict['loss']=loss
+            #     nan_list.append(nan_dict)
+            if torch.isfinite(tmp_loss):
+                loss += tmp_loss
             idx += num_class
 
         logging_output = {
