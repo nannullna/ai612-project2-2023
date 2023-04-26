@@ -213,19 +213,22 @@ class MyDataset00000000(BaseDataset):
         elif dataset_name == "eicu":
 
             if "labs" in events and len(events["labs"]) > 0:
-                input_ids, attention_mask = self.tokenize(events["labs"], self.labs_formats[dataset_name])
-                all_input_ids.append(input_ids)
-                all_attention_mask.append(attention_mask)
+                for event in events['labs']:
+                    input_ids, attention_mask = self.tokenize(event, self.labs_formats[dataset_name])
+                    all_input_ids.append(input_ids)
+                    all_attention_mask.append(attention_mask)
 
             if "prescrips" in events and len(events["prescrips"]) > 0:
-                input_ids, attention_mask = self.tokenize(events["prescrips"], self.prescrips_formats[dataset_name])
-                all_input_ids.append(input_ids)
-                all_attention_mask.append(attention_mask)
+                for event in events['prescrips']:
+                    input_ids, attention_mask = self.tokenize(event, self.prescrips_formats[dataset_name])
+                    all_input_ids.append(input_ids)
+                    all_attention_mask.append(attention_mask)
             
             if "inputs" in events and len(events["inputs"]) > 0:
-                input_ids, attention_mask = self.tokenize(events["inputs"], self.inputs_formats[dataset_name])
-                all_input_ids.append(input_ids)
-                all_attention_mask.append(attention_mask)    
+                for event in events['inputs']:
+                    input_ids, attention_mask = self.tokenize(event, self.inputs_formats[dataset_name])
+                    all_input_ids.append(input_ids)
+                    all_attention_mask.append(attention_mask)    
 
         outputs = {
             "input_ids": torch.stack(all_input_ids), # (num_timesteps, num_tokens)
