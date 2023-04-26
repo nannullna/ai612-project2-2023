@@ -185,6 +185,7 @@ class MyDataset00000000(BaseDataset):
 
         all_input_ids = []
         all_attention_mask = []
+        CUTS = 1
 
         if dataset_name in ["mimiciii", "mimiciv"]:
             for event in events:
@@ -213,22 +214,49 @@ class MyDataset00000000(BaseDataset):
         elif dataset_name == "eicu":
 
             if "labs" in events and len(events["labs"]) > 0:
-                for event in events['labs']:
-                    input_ids, attention_mask = self.tokenize(event, self.labs_formats[dataset_name])
+                for i in range(len(events["labs"]) // CUTS + 1):
+                    start_idx, end_idx = i * CUTS, (i+1) * CUTS
+                    if end_idx > len(events["labs"]):
+                        end_idx = len(events["labs"])
+                    if start_idx >= end_idx:
+                        break
+                    subset = events["labs"][start_idx:end_idx]
+                    input_ids, attention_mask = self.tokenize(subset, self.labs_formats[dataset_name])
                     all_input_ids.append(input_ids)
                     all_attention_mask.append(attention_mask)
 
             if "prescrips" in events and len(events["prescrips"]) > 0:
-                for event in events['prescrips']:
-                    input_ids, attention_mask = self.tokenize(event, self.prescrips_formats[dataset_name])
+                for i in range(len(events["prescrips"]) // CUTS + 1):
+                    start_idx, end_idx = i * CUTS, (i+1) * CUTS
+                    if end_idx > len(events["prescrips"]):
+                        end_idx = len(events["prescrips"])
+                    if start_idx >= end_idx:
+                        break
+                    subset = events["prescrips"][start_idx:end_idx]
+                    input_ids, attention_mask = self.tokenize(subset, self.prescrips_formats[dataset_name])
                     all_input_ids.append(input_ids)
                     all_attention_mask.append(attention_mask)
             
             if "inputs" in events and len(events["inputs"]) > 0:
-                for event in events['inputs']:
-                    input_ids, attention_mask = self.tokenize(event, self.inputs_formats[dataset_name])
+                for i in range(len(events["inputs"]) // CUTS + 1):
+                    start_idx, end_idx = i * CUTS, (i+1) * CUTS
+                    if end_idx > len(events["inputs"]):
+                        end_idx = len(events["inputs"])
+                    if start_idx >= end_idx:
+                        break
+                    subset = events["inputs"][start_idx:end_idx]
+                    input_ids, attention_mask = self.tokenize(subset, self.inputs_formats[dataset_name])
                     all_input_ids.append(input_ids)
-                    all_attention_mask.append(attention_mask)    
+                    all_attention_mask.append(attention_mask)
+
+        if len(all_input_ids) == 0:
+            all_input_ids.append(
+                torch.tensor([self.bos_token_id, self.eos_token_id] + [self.pad_token_id] * (self.max_tokens - 2), dtype=torch.long)
+            )
+            all_attention_mask.append(
+                torch.tensor([1, 1] + [0] * (self.max_tokens - 2), dtype=torch.long)
+            )
+            print(f"No events for icustay_id: {icustay_id}, len of labs: {len(events['labs'])}, prescrips: {len(events['prescrips'])}, inputs: {len(events['inputs'])}")
 
         outputs = {
             "input_ids": torch.stack(all_input_ids), # (num_timesteps, num_tokens)
@@ -271,7 +299,7 @@ class MyDataset00000000(BaseDataset):
         batch_max = max(origin_timesteps)
 
         input_ids = [torch.cat([s['input_ids'], torch.zeros(batch_max-len(s['input_ids']), self.max_tokens, dtype=s['input_ids'].dtype)], dim=0) for s in samples]
-        attention_masks = [torch.cat([s['attention_mask'], torch.zeros(batch_max-len(s['input_ids']), self.max_tokens, dtype=s['input_ids'].dtype)], dim=0) for s in samples]
+        attention_masks = [torch.cat([s['attention_mask'], torch.zeros(batch_max-len(s['input_ids']), self.max_tokens, dtype=s['attention_mask'].dtype)], dim=0) for s in samples]
         intimes = [s['intime'] for s in samples]
         labels = [s['labels'] for s in samples]
         icustay_ids = [s['icustay_id'] for s in samples]
