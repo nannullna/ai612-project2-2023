@@ -133,7 +133,8 @@ class Transformer(nn.Module):
             nn.Linear(
                 self.dim_model,
                 self.final_dim
-            )
+            ),
+            nn.ReLU()
         )
 
     def forward(self, x):
