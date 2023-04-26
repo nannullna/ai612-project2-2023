@@ -106,7 +106,7 @@ class MyModel00000000(BaseModel):
         #     attention_mask=attention_mask.squeeze(0) # 원래 기대하는 shape는 (bs, max sequence length)
         # ) # output > (ts, 768)
 
-        embeddings = torch.stack([torch.flip(e, [0]) for e in embeddings]) # (bs, max_timestep, 768)
+        embeddings = torch.stack(embeddings) # (bs, max_timestep, 768)
 
         agg = self.agg(embeddings, kwargs['timesteps'])  # output > (2, 128)
         output = self.customs(agg) # (2, 52)
