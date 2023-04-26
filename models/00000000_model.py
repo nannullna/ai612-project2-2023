@@ -54,13 +54,10 @@ class MyModel00000000(BaseModel):
         self.agg = Transformer()
 
         # Custom layers
-        self.custom_hidden_dim = 128
         self.customs = nn.Sequential(
             nn.Dropout(0.2),
-            nn.Linear(self.agg.final_dim, self.custom_hidden_dim), # (256, 128)
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(self.custom_hidden_dim, 52)
+            nn.Linear(self.agg.final_dim, 52), # (25, 256)
+            nn.ReLU()
         )
 
     def get_logits(cls, net_output):
