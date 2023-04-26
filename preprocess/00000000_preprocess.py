@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from tqdm import tqdm
 import pickle
 import os
+import warnings
 
 def get_parser():
     """
@@ -18,17 +19,16 @@ def get_parser():
     parser.add_argument(
         "root",
         metavar="DIR",
-        # default='./train/',
+        default='./train/',
         help="root directory containing different ehr files to pre-process (usually, 'train/')"
     )
     parser.add_argument(
         "--dest",
         type=str,
         metavar="DIR",
-        # default= './outcome',
+        default= './outcome',
         help="output directory"
     )
-
     parser.add_argument(
         "--sample_filtering",
         type=bool,
@@ -36,6 +36,7 @@ def get_parser():
         help="indicator to prevent filtering from being applies to the test dataset."
     )
     return parser
+
 
 
 def make_icustay_id(III_lab, III_icustay, IV_lab, IV_prescrip, IV_icustay):
@@ -276,12 +277,6 @@ def main(args):
         Example:
             with open('./20231234_vocab.pkl', 'rb') as f:
                 (...)
-
-        3. For fair comparison, we do not allow to filter specific samples when using test dataset.
-        Therefore, if you filter some samples from the train dataset,
-        you must use the '--sample_filtering' argument to prevent filtering from being applied to the test dataset.
-        We will set the '--sample_filtering' argument to False and run the code for inference.
-        We also check the total number of test dataset.
     """
 
     root_dir = args.root
@@ -322,19 +317,45 @@ def main(args):
 
     ### Concat the inputCV+inputMV for MIMIC-III
     III_input_mv.rename(columns = {'STARTTIME' : 'CHARTTIME'}, inplace = True)
+    III_input_mv.rename(columns = {'STATUSDESCRIPTION' : 'STOPPED'}, inplace = True)
     III_input = pd.concat([III_input_cv, III_input_mv], axis=0).sort_values('ICUSTAY_ID')
     III_input = III_input.reset_index(drop=True)
-
+    
     # ### Look-up table for MIMIC dataset
     III_input = look_up_table('III', III_input, III_input_items, 1) # 22m
     III_lab = look_up_table('III', III_lab, III_lab_items, 2) # 14m
     IV_input = look_up_table('IV', IV_input, IV_input_items, 3) # 11m
     IV_lab = look_up_table('IV', IV_lab, IV_lab_items, 4) # 23m
     
+    
     ### Merge two similar columns for eICU
     EICU_lab['labmeasurename'] = np.where(pd.notnull(EICU_lab['labmeasurenamesystem']) == True, 
                                           EICU_lab['labmeasurenamesystem'], EICU_lab['labmeasurenameinterface'])
     EICU_lab.drop(['labmeasurenamesystem', 'labmeasurenameinterface'], axis=1, inplace=True)
+    
+    
+    ### Save
+    inter_dir = './inter/'
+    if not os.path.exists(inter_dir):
+            os.makedirs(inter_dir)
+    with open(inter_dir + 'mimiciii_lab.pickle', 'wb') as f:
+        pickle.dump(III_lab, f)
+    with open(inter_dir + 'mimiciii_prescrip.pickle', 'wb') as f:
+        pickle.dump(III_prescrip, f)
+    with open(inter_dir + 'mimiciii_input.pickle', 'wb') as f:
+        pickle.dump(III_input, f)
+    with open(inter_dir + 'mimiciv_lab.pickle', 'wb') as f:
+        pickle.dump(IV_lab, f)
+    with open(inter_dir + 'mimiciv_prescrip.pickle', 'wb') as f:
+        pickle.dump(IV_prescrip, f)
+    with open(inter_dir + 'mimiciv_input.pickle', 'wb') as f:
+        pickle.dump(IV_input, f)
+    with open(inter_dir + 'eicu_lab.pickle', 'wb') as f:
+        pickle.dump(EICU_lab, f)
+    with open(inter_dir + 'eicu_prescrip.pickle', 'wb') as f:
+        pickle.dump(EICU_prescrip, f)
+    with open(inter_dir + 'eicu_input.pickle', 'wb') as f:
+        pickle.dump(EICU_input, f)
     
     ### Make dictionary
     III_final = MIMIC_make_final_dict('III', III_lab, III_prescrip, III_input, III_label, III_icustay) # 18m
@@ -354,6 +375,9 @@ def main(args):
 
 
 if __name__ == "__main__":
+    
+    warnings.filterwarnings(action='ignore')
+    
     parser = get_parser()
     args = parser.parse_args()
     main(args)
